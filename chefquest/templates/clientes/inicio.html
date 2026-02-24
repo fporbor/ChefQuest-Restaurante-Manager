@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Carta</h1>
+
+{% for producto in productos %}
+    <p>{{ producto.nombre }} - {{ producto.precio }}€</p>
+{% endfor %}
+
+{% endblock %}

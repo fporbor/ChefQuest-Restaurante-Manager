@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+<h2>Reservas de la Empresa</h2>
+
+<table>
+    <tr>
+        <th>Cliente</th>
+        <th>Tipo</th>
+        <th>Fecha</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+    </tr>
+
+    {% for reserva in object_list %}
+    <tr>
+        <td>{{ reserva.cliente.nombre_visible }}</td>
+        <td>{{ reserva.get_tipo_display }}</td>
+        <td>{{ reserva.fecha }}</td>
+        <td>{{ reserva.get_estado_display }}</td>
+        <td>
+            <a class="btn"
+               href="{% url 'confirmar_reserva' reserva.pk %}">
+               Confirmar
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+</div>
+
+{% endblock %}

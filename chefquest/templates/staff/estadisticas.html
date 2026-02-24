@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+<h2>Estadísticas</h2>
+
+<p><strong>Total reservas:</strong> {{ total_reservas }}</p>
+<p><strong>Total confirmadas:</strong> {{ total_confirmadas }}</p>
+
+<table>
+    <tr>
+        <th>Tipo</th>
+        <th>Fecha</th>
+        <th>Estado</th>
+    </tr>
+
+    {% for reserva in object_list %}
+    <tr>
+        <td>{{ reserva.get_tipo_display }}</td>
+        <td>{{ reserva.fecha }}</td>
+        <td>{{ reserva.get_estado_display }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</div>
+
+{% endblock %}

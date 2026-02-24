@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+<h2>Detalle Reserva</h2>
+
+<p><strong>Tipo:</strong> {{ object.get_tipo_display }}</p>
+<p><strong>Fecha:</strong> {{ object.fecha }}</p>
+<p><strong>Comensales:</strong> {{ object.comensales }}</p>
+<p><strong>Dirección:</strong> {{ object.direccion }}</p>
+<p><strong>Notas:</strong> {{ object.notas }}</p>
+
+<h3>Productos</h3>
+
+<ul>
+    {% for producto in object.productos.all %}
+        <li>{{ producto.nombre }} - {{ producto.precio }}€</li>
+    {% empty %}
+        <li>No hay productos.</li>
+    {% endfor %}
+</ul>
+
+</div>
+
+{% endblock %}

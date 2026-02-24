@@ -1,0 +1,17 @@
+{% extends "../../chefquest/templates/base.html" %}
+<h2>Registro</h2>
+<form method="post">
+    {% csrf_token %}
+
+    <fieldset>
+        <legend>Datos de usuario</legend>
+        {{ form.as_p }}
+    </fieldset>
+
+    <fieldset>
+        <legend>Perfil</legend>
+        {{ perfil_form.as_p }}
+    </fieldset>
+
+    <button type="submit">Registrarse</button>
+</form>

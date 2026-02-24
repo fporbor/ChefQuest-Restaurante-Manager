@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Login Empresa</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="text" name="codigo" placeholder="Código empresa">
+    <button type="submit">Entrar</button>
+</form>
+
+{% endblock %}

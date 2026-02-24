@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+<h2>Inventario</h2>
+
+<a href="{% url 'producto_create' %}" class="btn">
+    Crear producto
+</a>
+
+<table>
+    <tr>
+        <th>Nombre</th>
+        <th>Precio</th>
+        <th>Coste</th>
+        <th>Stock</th>
+        <th>Activo</th>
+    </tr>
+
+    {% for producto in object_list %}
+    <tr>
+        <td>{{ producto.nombre }}</td>
+        <td>{{ producto.precio }}€</td>
+        <td>{{ producto.coste }}€</td>
+        <td>{{ producto.stock }}</td>
+        <td>{{ producto.activo }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</div>
+
+{% endblock %}
