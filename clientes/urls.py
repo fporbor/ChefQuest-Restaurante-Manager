@@ -23,7 +23,7 @@ urlpatterns = [
     path("registro/", views.UsuarioCreateView.as_view(), name="registro"),
     path("login/", views.UsuarioLoginView.as_view(), name="login"),
     path("logout/", views.UsuarioLogoutView.as_view(), name="logout"),
-
+    path("", views.inicio, name="inicio"),
     path("reservas/", views.MisReservasListView.as_view(), name="mis_reservas"),
     path("reservas/nueva/", views.ReservaPedidoCreateView.as_view(), name="reserva_create"),
     path("reservas/<int:pk>/", views.ReservaDetailView.as_view(), name="reserva_detail"),
