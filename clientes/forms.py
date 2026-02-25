@@ -55,9 +55,11 @@ class ReservaPedidoForm(forms.ModelForm):
             "fecha": forms.DateTimeInput(attrs={"type": "datetime-local"})
         }
 
-
     def clean_fecha(self):
-        fecha = self.cleaned_data["fecha"]
+        fecha = self.cleaned_data.get("fecha")
+
+        if not fecha:
+            return fecha
 
         if fecha <= timezone.now():
             raise ValidationError("La fecha debe ser futura.")
@@ -71,23 +73,20 @@ class ReservaPedidoForm(forms.ModelForm):
         comensales = cleaned_data.get("comensales")
         productos = cleaned_data.get("productos")
 
-        # LOCAL → mínimo 1 comensal
         if tipo == "LOCAL":
             if not comensales or comensales < 1:
                 raise ValidationError(
                     "Una reserva en local debe tener al menos 1 comensal."
                 )
 
-        # COMIDA → debe tener productos
         if tipo == "COMIDA":
-            if not productos:
+            if not productos or productos.count() == 0:
                 raise ValidationError(
                     "Un pedido de comida debe incluir productos."
                 )
 
-        # EVENTO → mínimo 5 comensales + 48h antelación
         if tipo == "EVENTO":
-            if comensales < 5:
+            if not comensales or comensales < 5:
                 raise ValidationError(
                     "Un evento requiere al menos 5 comensales."
                 )
@@ -99,27 +98,11 @@ class ReservaPedidoForm(forms.ModelForm):
 
         return cleaned_data
 
-
-    def clean_fecha(self):
-        fecha = self.cleaned_data["fecha"]
-        usuario = self.initial.get("cliente")
-
-        if usuario and Reserva_Pedido.objects.filter(
-            cliente=usuario,
-            fecha=fecha
-        ).exists():
-            raise ValidationError(
-                "Ya tienes una reserva/pedido en esa fecha."
-            )
-
-        if fecha <= timezone.now():
-            raise ValidationError("La fecha debe ser futura.")
-
-        return fecha
-
-
     def clean_productos(self):
-        productos = self.cleaned_data["productos"]
+        productos = self.cleaned_data.get("productos")
+
+        if not productos:
+            return productos
 
         for producto in productos:
             if not producto.activo:

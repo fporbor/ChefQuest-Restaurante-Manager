@@ -7,6 +7,8 @@ from django.contrib.auth import login
 from django.db import transaction
 from django.contrib import messages
 
+from django.contrib.auth.decorators import login_required
+
 from .models import Usuario, Usuario_Perfil, Reserva_Pedido
 from .forms import UsuarioRegistroForm, UsuarioPerfilForm, ReservaPedidoForm
 from staff.models import Producto
@@ -79,12 +81,17 @@ class ReservaDetailView(LoginRequiredMixin,
     model = Reserva_Pedido
     template_name = "clientes/reserva_detail.html"
 
+@login_required
 def cancelar_reserva(request, pk):
     reserva = get_object_or_404(
         Reserva_Pedido,
         pk=pk,
         cliente=request.user
     )
+
+    if reserva.estado == "CANCELADO":
+        messages.warning(request, "La reserva ya estaba cancelada.")
+        return redirect("mis_reservas")
 
     reserva.estado = "CANCELADO"
     reserva.save()
