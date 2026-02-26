@@ -6,7 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import login
 from django.db import transaction
 from django.contrib import messages
-
+from django.utils.dateparse import parse_datetime
 from django.contrib.auth.decorators import login_required
 
 from .models import Usuario, Usuario_Perfil, Reserva_Pedido
@@ -64,10 +64,56 @@ class ReservaPedidoCreateView(LoginRequiredMixin, CreateView):
     template_name = "clientes/reserva_form.html"
     success_url = reverse_lazy("mis_reservas")
 
+    SESSION_KEY = "reserva_en_construccion"
+
+    def get_initial(self):
+        """
+        Cargar datos guardados en sesión si existen.
+        """
+        initial = super().get_initial()
+        datos = self.request.session.get(self.SESSION_KEY)
+
+        if datos:
+            initial.update(datos)
+
+        return initial
+
+    def form_invalid(self, form):
+        """
+        Guardar datos en sesión si el formulario es inválido.
+        """
+        datos = self.request.POST.dict()
+        datos.pop("csrfmiddlewaretoken", None)
+
+        # productos es ManyToMany → guardar lista
+        datos["productos"] = self.request.POST.getlist("productos")
+
+        self.request.session[self.SESSION_KEY] = datos
+
+        messages.warning(
+            self.request,
+            "Tu reserva se ha guardado temporalmente en sesión."
+        )
+
+        return super().form_invalid(form)
+
     def form_valid(self, form):
+        """
+        Guardar reserva definitiva y limpiar sesión.
+        """
         form.instance.cliente = self.request.user
         form.instance.empresa_id = self.request.session.get("empresa_id")
-        return super().form_valid(form)
+        form.instance.estado = "PENDIENTE"
+
+        response = super().form_valid(form)
+
+        # Limpiar sesión
+        if self.SESSION_KEY in self.request.session:
+            del self.request.session[self.SESSION_KEY]
+
+        messages.success(self.request, "Reserva creada correctamente.")
+
+        return response
 
 class MisReservasListView(LoginRequiredMixin,
                           ClientePropietarioMixin,
@@ -99,6 +145,12 @@ def cancelar_reserva(request, pk):
     messages.success(request, "Reserva cancelada.")
     return redirect("mis_reservas")
 
+
+@login_required
+def limpiar_reserva_sesion(request):
+    request.session.pop("reserva_en_construccion", None)
+    messages.info(request, "Reserva temporal eliminada.")
+    return redirect("reserva_create")
 def cambiar_tema(request):
     """
     Guarda la preferencia de tema en una cookie.
