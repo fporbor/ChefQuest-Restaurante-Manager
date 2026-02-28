@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: chefquest_db_container
+    environment:
+      - POSTGRES_DB=chefquest_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chefquest_network
+
+  web:
+    build: .
+    container_name: chefquest_web_container
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=^wov4o7o_h5711575pibo14+nxghfesou&b#(f6t&)l19qtrff
+      - DEBUG=True
+      - DB_NAME=chefquest_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
+    networks:
+      - chefquest_network
+
+volumes:
+  postgres_data:
+
+networks:
+  chefquest_network:

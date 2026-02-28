@@ -1,10 +1,30 @@
-# Default ignored files
+# === Configuración del Editor (Lo que ya tenías) ===
+.idea/
 /shelf/
 /workspace.xml
-# Ignored default folder with query files
 /queries/
-# Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
-# Editor-based HTTP Client requests
 /httpRequests/
+*.iml
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# === Django ===
+# Muy importante: No queremos subir la base de datos local SQLite
+# ya que ahora usamos PostgreSQL en Docker.
+db.sqlite3
+db.sqlite3-journal
+/media/
+/static/
+.env
+
+# === Docker ===
+# Ignoramos datos locales de contenedores si los hubiera
+.docker/
