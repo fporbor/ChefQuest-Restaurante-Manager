@@ -1,136 +1,43 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
     <title>ChefQuest</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f6f9;
-        }
-
-        body.oscuro {
-            background-color: #1e1e1e;
-            color: white;
-        }
-
-        header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 15px;
-        }
-
-        header a {
-            color: white;
-            margin-right: 15px;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .container {
-            padding: 30px;
-            max-width: 1000px;
-            margin: auto;
-        }
-
-        h1, h2, h3 {
-            margin-top: 0;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
-        }
-
-        body.oscuro .card {
-            background: #2b2b2b;
-        }
-
-        button, .btn {
-            background-color: #3498db;
-            border: none;
-            color: white;
-            padding: 8px 14px;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        button:hover, .btn:hover {
-            background-color: #2980b9;
-        }
-
-        .btn-danger {
-            background-color: #e74c3c;
-        }
-
-        .btn-danger:hover {
-            background-color: #c0392b;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        table th, table td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        body.oscuro table th,
-        body.oscuro table td {
-            border-color: #444;
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
-        body.oscuro input,
-        body.oscuro select,
-        body.oscuro textarea {
-            background: #444;
-            color: white;
-            border: 1px solid #666;
-        }
-
-        .badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .pendiente { background: orange; color: white; }
-        .confirmado { background: green; color: white; }
-        .cancelado { background: red; color: white; }
-        .entregado { background: blue; color: white; }
-
-    </style>
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'img/icono.png' %}">
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body class="{{ request.COOKIES.tema }}">
 
 <header>
     <a href="{% url 'inicio' %}">Inicio</a>
-    <a href="{% url 'mis_reservas' %}">Mis reservas</a>
-    <a href="{% url 'producto_list' %}">Inventario</a>
-    <a href="{% url 'estadisticas' %}">Estadísticas</a>
+    <a href="{% url 'clientes:mis_reservas' %}">Mis reservas</a>
+    <a href="{% url 'staff:producto_list' %}">Inventario</a>
+    <a href="{% url 'staff:estadisticas' %}">Estadísticas</a>
 
     <span style="float:right;">
-        <a href="{% url 'cambiar_tema' %}?tema=oscuro">🌙 Oscuro</a>
-        <a href="{% url 'cambiar_tema' %}?tema=claro">☀ Claro</a>
+
+        {% if request.user.is_authenticated %}
+            <span>Hola, {{ request.user.username }} | </span>
+            <a href="{% url 'clientes:logout' %}">Logout</a>
+        {% else %}
+            <a href="{% url 'clientes:login' %}">Inicio de Sesión</a>
+            <a href="{% url 'clientes:registro' %}">Registro</a>
+        {% endif %}
+
+        &nbsp; | &nbsp;
+
+        {% if request.COOKIES.tema == "oscuro" %}
+            <a href="{% url 'cambiar_tema' %}?tema=claro">☀ Claro</a>
+        {% elif request.COOKIES.tema == "claro" %}
+            <a href="{% url 'cambiar_tema' %}?tema=oscuro">🌙 Oscuro</a>
+        {% else %}
+            <!-- Si no hay cookie aún, muestra ambos o el que prefieras -->
+            <a href="{% url 'cambiar_tema' %}?tema=oscuro">🌙 Oscuro</a>
+            <a href="{% url 'cambiar_tema' %}?tema=claro">☀ Claro</a>
+        {% endif %}
+
     </span>
 </header>
 

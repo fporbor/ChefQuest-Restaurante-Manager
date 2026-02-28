@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-# ChefQuest-Restaurante-Manager
-
-Participantes del proyecto:
--Francisco Javier Porta Borge.
-    Ocupa el rol de Team Leader, respondable de Datos y ORM (Rol 1)
--Angel del Aguila.
-    Responsable de usuarios y flujos de negocio (Rol 2)
--Alvaro Sibon.
-    Responsable de Insfractuctura y Documentación
-=======
 # ChefQuest: Restaurante Manager 
 
 Sistema integral de gestión para restaurantes desarrollado con **Django** y **PostgreSQL**. Este proyecto utiliza **Docker** para garantizar un entorno de desarrollo idéntico para todo el equipo, cumpliendo con los requisitos de infraestructura y persistencia.
@@ -64,4 +53,7 @@ R-12,Dockerización Completa,Dockerfile y docker-compose.yml
 R-12.2,Persistencia de datos,Volumen postgres_data en Docker
 R-13,Gestión de dependencias,Archivo requirements.txt
 R-14,Documentación técnica,Este archivo README.md
->>>>>>> infraestructura-docker
+### Extras opcionales:
+1. Modo “carta del día” (productos destacados configurables por staff).
+2. Cupones simples (descuento fijo/porcentaje) aplicados en pedidos.
+3. Sistema de aforo (bloquear reservas si se supera capacidad por franja horaria).

@@ -1,13 +1,16 @@
-{% extends "../../chefquest/templates/base.html" %}
+{% extends "base.html" %}
+
+{% block content %}
 <h2>Inicio de sesión</h2>
+
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-
     <button type="submit">Entrar</button>
 </form>
 
 <p>
     ¿No tienes cuenta?
-    <a href="{% url 'registro' %}">Regístrate</a>
+    <a href="{% url 'clientes:registro' %}">Regístrate</a>
 </p>
+{% endblock %}

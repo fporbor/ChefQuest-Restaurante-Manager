@@ -24,7 +24,7 @@ class Producto(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.SET_NULL, null=True, blank=True)
     categoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
-        return f"{self.nombre} - {self.empresa.nombre_comercial}"
+        return f"{self.nombre}"
 
 class Categoria(models.Model):
     nombre = models.CharField(max_length=30)
