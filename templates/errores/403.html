@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align:center; padding:50px;">
+    <h1 style="font-size: 60px; color:#e74c3c;">403</h1>
+    <h2>Acceso denegado</h2>
+    <p>No tienes permisos para acceder a esta sección.</p>
+
+    <a href="{% url 'inicio' %}" style="font-size:18px;">Volver al inicio</a>
+</div>
+{% endblock %}

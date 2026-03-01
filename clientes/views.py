@@ -25,7 +25,7 @@ class UsuarioCreateView(CreateView):
     model = Usuario
     form_class = UsuarioRegistroForm
     template_name = "clientes/registro.html"
-    success_url = reverse_lazy("inicio")
+    success_url = reverse_lazy("clientes:inicio")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -51,18 +51,18 @@ class UsuarioCreateView(CreateView):
         return self.form_invalid(form)
 
 class UsuarioLoginView(LoginView):
-    template_name = "clientes/login.html"
+    template_name = "registration/login.html"
     redirect_authenticated_user = True
 
 
 class UsuarioLogoutView(LogoutView):
-    next_page = reverse_lazy("inicio")
+    next_page = reverse_lazy("clientes:inicio")
 
 class ReservaPedidoCreateView(LoginRequiredMixin, CreateView):
     model = Reserva_Pedido
     form_class = ReservaPedidoForm
     template_name = "clientes/reserva_form.html"
-    success_url = reverse_lazy("mis_reservas")
+    success_url = reverse_lazy("clientes:mis_reservas")
 
     SESSION_KEY = "reserva_en_construccion"
 
@@ -137,13 +137,13 @@ def cancelar_reserva(request, pk):
 
     if reserva.estado == "CANCELADO":
         messages.warning(request, "La reserva ya estaba cancelada.")
-        return redirect("mis_reservas")
+        return redirect("clientes:mis_reservas")
 
     reserva.estado = "CANCELADO"
     reserva.save()
 
     messages.success(request, "Reserva cancelada.")
-    return redirect("mis_reservas")
+    return redirect("clientes:mis_reservas")
 
 
 @login_required

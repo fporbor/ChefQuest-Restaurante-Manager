@@ -13,14 +13,25 @@
 <header>
     <a href="{% url 'inicio' %}">Inicio</a>
     <a href="{% url 'clientes:mis_reservas' %}">Mis reservas</a>
-    <a href="{% url 'staff:producto_list' %}">Inventario</a>
-    <a href="{% url 'staff:estadisticas' %}">Estadísticas</a>
+
+    {% if request.user.is_authenticated and request.user.is_staff %}
+        <a href="{% url 'staff:producto_list' %}">Inventario</a>
+        <a href="{% url 'staff:estadisticas' %}">Estadísticas</a>
+    {% endif %}
 
     <span style="float:right;">
 
         {% if request.user.is_authenticated %}
             <span>Hola, {{ request.user.username }} | </span>
-            <a href="{% url 'clientes:logout' %}">Logout</a>
+
+            <!-- CAMBIADO: ahora es POST -->
+            <form action="{% url 'clientes:logout' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit">
+                    Cerrar sesión
+                </button>
+            </form>
+
         {% else %}
             <a href="{% url 'clientes:login' %}">Inicio de Sesión</a>
             <a href="{% url 'clientes:registro' %}">Registro</a>
@@ -33,7 +44,6 @@
         {% elif request.COOKIES.tema == "claro" %}
             <a href="{% url 'cambiar_tema' %}?tema=oscuro">🌙 Oscuro</a>
         {% else %}
-            <!-- Si no hay cookie aún, muestra ambos o el que prefieras -->
             <a href="{% url 'cambiar_tema' %}?tema=oscuro">🌙 Oscuro</a>
             <a href="{% url 'cambiar_tema' %}?tema=claro">☀ Claro</a>
         {% endif %}

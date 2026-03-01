@@ -19,18 +19,18 @@
         <td>{{ reserva.get_tipo_display }}</td>
         <td>{{ reserva.fecha }}</td>
         <td>
-            <span class="badge {{ reserva.estado|lower }}">
+            <span class="badge {{reserva.estado|lower }}">
                 {{ reserva.get_estado_display }}
             </span>
         </td>
         <td>
-            <a class="btn" href="{% url 'reserva_detail' reserva.pk %}">
+            <a class="btn" href="{% url 'clientes:reserva_detail' reserva.pk %}">
                 Ver
             </a>
 
             {% if reserva.estado != "CANCELADO" %}
             <a class="btn btn-danger"
-               href="{% url 'cancelar_reserva' reserva.pk %}">
+               href="{% url 'clientes:cancelar_reserva' reserva.pk %}">
                 Cancelar
             </a>
             {% endif %}

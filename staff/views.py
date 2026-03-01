@@ -41,7 +41,7 @@ def login_empresa(request):
 def logout_empresa(request):
     request.session.pop("empresa_id", None)
     messages.info(request, "Sesión de empresa cerrada.")
-    return redirect("login_empresa")
+    return redirect("staff:login_empresa")
 
 
 # ==============================
@@ -71,7 +71,7 @@ class ProductoCreateView(LoginRequiredMixin,
               "coste", "stock", "activo", "categoria"]
     permission_required = "staff.add_producto"
     template_name = "staff/producto_form.html"
-    success_url = reverse_lazy("producto_list")
+    success_url = reverse_lazy("staff:producto_list")
 
     def form_valid(self, form):
         empresa_id = self.request.session.get("empresa_id")
@@ -93,7 +93,7 @@ class ProductoUpdateView(LoginRequiredMixin,
               "coste", "stock", "activo", "categoria"]
     permission_required = "staff.change_producto"
     template_name = "staff/producto_form.html"
-    success_url = reverse_lazy("producto_list")
+    success_url = reverse_lazy("staff:producto_list")
 
     def get_queryset(self):
         empresa_id = self.request.session.get("empresa_id")
@@ -108,7 +108,7 @@ class ProductoDeleteView(LoginRequiredMixin,
     model = Producto
     permission_required = "staff.delete_producto"
     template_name = "staff/producto_confirm_delete.html"
-    success_url = reverse_lazy("producto_list")
+    success_url = reverse_lazy("staff:producto_list")
 
     def get_queryset(self):
         empresa_id = self.request.session.get("empresa_id")
@@ -154,13 +154,13 @@ def confirmar_reserva(request, pk):
 
     if reserva.estado != "PENDIENTE":
         messages.error(request, "Solo se pueden confirmar reservas pendientes.")
-        return redirect("lista_reservas_staff")
+        return redirect("staff:lista_reservas_staff")
 
     # Comprobar stock antes de confirmar
     for producto in reserva.productos.all():
         if producto.stock < 1:
             messages.error(request, f"No hay stock suficiente de {producto.nombre}.")
-            return redirect("lista_reservas_staff")
+            return redirect("staff:lista_reservas_staff")
 
     # Restar stock
     for producto in reserva.productos.all():
@@ -172,7 +172,7 @@ def confirmar_reserva(request, pk):
     reserva.save()
 
     messages.success(request, "Reserva confirmada correctamente.")
-    return redirect("lista_reservas_staff")
+    return redirect("staff:lista_reservas_staff")
 
 
 # ==============================
