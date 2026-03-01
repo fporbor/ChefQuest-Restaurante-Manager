@@ -16,7 +16,7 @@ from .models import Usuario, Usuario_Perfil, Reserva_Pedido
 from .forms import UsuarioRegistroForm, UsuarioPerfilForm, ReservaPedidoForm, LoginEmpresaForm
 from staff.models import Producto, Empresa
 from staff.mixins import ClientePropietarioMixin
-from staff.views import EmpresaRegistroForm
+from staff.forms import EmpresaRegistroForm
 
 User = get_user_model()
 
@@ -60,7 +60,6 @@ class UsuarioCreateView(CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["perfil_form"] = UsuarioPerfilForm(self.request.POST or None)
-        # intentar crear empresa_form si la clase existe
         try:
             context["empresa_form"] = EmpresaRegistroForm(self.request.POST or None)
         except Exception:
@@ -73,7 +72,6 @@ class UsuarioCreateView(CreateView):
         perfil_form = context["perfil_form"]
         empresa_form = context.get("empresa_form")
 
-        # validar perfil y propagar errores
         if not perfil_form.is_valid():
             for field, errors in perfil_form.errors.items():
                 for err in errors:
@@ -81,68 +79,52 @@ class UsuarioCreateView(CreateView):
             return self.form_invalid(form)
 
         es_empresa = form.cleaned_data.get("es_empresa")
-
-        # validar empresa si procede (soporta empresa_form o campos inline con prefijo empresa_)
-        empresa_form_to_use = None
+        nombre_empresa = form.cleaned_data.get("nombre_empresa")
         post = self.request.POST
+
+        # Validación empresa
+        empresa_form_to_use = None
         if es_empresa:
             if empresa_form is not None:
-                # si la plantilla usa prefijos, mapearlos
-                if "nombre_comercial" not in post and "empresa_nombre_comercial" in post:
-                    empresa_data = {
-                        "nombre_comercial": post.get("empresa_nombre_comercial", "").strip(),
-                        "contacto": post.get("empresa_contacto", "").strip() or form.cleaned_data.get("email"),
-                        "codigo": post.get("empresa_codigo", "").strip() or None,
-                    }
-                    empresa_form_to_use = EmpresaRegistroForm(empresa_data)
-                else:
-                    empresa_form_to_use = EmpresaRegistroForm(self.request.POST)
+                empresa_form_to_use = EmpresaRegistroForm(self.request.POST)
                 if not empresa_form_to_use.is_valid():
                     for field, errors in empresa_form_to_use.errors.items():
                         for err in errors:
                             form.add_error(None, f"Empresa {field}: {err}")
                     return self.form_invalid(form)
             else:
-                # no hay EmpresaRegistroForm: validar mínimo inline
-                nombre = post.get("empresa_nombre_comercial", "").strip()
-                if not nombre:
-                    form.add_error(None, "Si te registras como empresa debes indicar el nombre comercial.")
+                if not nombre_empresa:
+                    form.add_error(None, "Si te registras como empresa debes indicar el nombre de la empresa.")
                     return self.form_invalid(form)
-                # empresa_form_to_use queda en None -> crearemos empresa inline más abajo
 
-        # Guardar usuario (solo usuario)
+        # Crear usuario
         usuario = form.save()
 
-        # Crear o actualizar perfil (evitar duplicados)
+        # Crear perfil
         perfil, created = Usuario_Perfil.objects.get_or_create(usuario=usuario)
-        # actualizar campos del perfil con los datos del perfil_form
         perfil_obj = perfil_form.save(commit=False)
-        perfil_obj.usuario = usuario
         perfil.preferencias_de_comunicacion = getattr(perfil_obj, "preferencias_de_comunicacion", perfil.preferencias_de_comunicacion)
         perfil.direccion = getattr(perfil_obj, "direccion", perfil.direccion)
         perfil.observacion = getattr(perfil_obj, "observacion", perfil.observacion)
         perfil.save()
 
-        # Crear empresa solo UNA vez y asociarla al perfil (si procede)
+        # Crear empresa y asociarla al usuario
         if es_empresa:
             if empresa_form_to_use and empresa_form_to_use.is_valid():
                 empresa = empresa_form_to_use.save()
             else:
-                # crear empresa mínima inline si no hay empresa_form
                 empresa = Empresa.objects.create(
-                    nombre_comercial=post.get("empresa_nombre_comercial", "").strip(),
-                    contacto=post.get("empresa_contacto", "").strip() or usuario.email,
-                    codigo=UsuarioRegistroForm()._generar_codigo_unico()
+                    nombre_comercial=nombre_empresa,
+                    contacto=usuario.email,
+                    codigo=form._generar_codigo_unico()
                 )
 
-            # Asociar la empresa al perfil (no al usuario directamente)
-            if hasattr(perfil, "empresa"):
-                perfil.empresa = empresa
-                perfil.save()
+            usuario.empresa = empresa
+            usuario.save()
 
-        # Asignar grupos (si no lo hizo el form.save)
+        # Asignar grupos
         try:
-            if form.cleaned_data.get("es_empresa"):
+            if es_empresa:
                 grupo, _ = Group.objects.get_or_create(name="Empresas")
                 usuario.groups.add(grupo)
                 usuario.is_staff = True
@@ -150,15 +132,12 @@ class UsuarioCreateView(CreateView):
                 grupo, _ = Group.objects.get_or_create(name="Usuarios")
                 usuario.groups.add(grupo)
         except Exception:
-            # no bloquear el registro por problemas con grupos
             pass
+
         usuario.save()
 
-        # Login automático
         login(self.request, usuario)
         return redirect(self.success_url)
-
-
 
 
 class UsuarioLogoutView(LogoutView):
@@ -190,7 +169,8 @@ class ReservaPedidoCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.cliente = self.request.user
-        form.instance.empresa_id = self.request.session.get("empresa_id")
+        # Si el modelo Reserva_Pedido no tiene campo empresa_id, no asignamos empresa aquí.
+        # La pertenencia a empresa se determina por cliente.perfil.empresa o por productos al confirmar.
         form.instance.estado = "PENDIENTE"
         response = super().form_valid(form)
         if self.SESSION_KEY in self.request.session:
@@ -230,7 +210,8 @@ class ReservaDetailView(LoginRequiredMixin, ClientePropietarioMixin, DetailView)
 
     def get_queryset(self):
         qs = super().get_queryset().filter(cliente=self.request.user)
-        return qs.select_related("empresa", "cliente").prefetch_related("productos")
+        # Reserva_Pedido no tiene FK directa a empresa; evitar select_related("empresa")
+        return qs.select_related("cliente").prefetch_related("productos")
 
 
 @login_required
