@@ -57,3 +57,36 @@ R-14,Documentación técnica,Este archivo README.md
 1. Modo “carta del día” (productos destacados configurables por staff).
 2. Cupones simples (descuento fijo/porcentaje) aplicados en pedidos.
 3. Sistema de aforo (bloquear reservas si se supera capacidad por franja horaria).
+
+### Workflow seguido (Flujo de Trabajo)
+Para garantizar la integridad del proyecto ChefQuest, se ha seguido un flujo de trabajo colaborativo basado en el modelo Git Flow, permitiendo el desarrollo paralelo de infraestructura y lógica de negocio.
+
+* **Gestión de ramas e integración**
+El proyecto se ha estructurado en ramas dedicadas para separar responsabilidades y evitar conflictos:
+
+main: Rama principal que contiene la versión estable y desplegable.
+
+infraestructura-docker: Rama dedicada a la configuración del entorno, Dockerización y base de datos (PostgreSQL).
+
+rama-angel: Rama enfocada en la lógica de negocio, desarrollo de views, formularios y modelos.
+
+Integración: Cada rama funcional se ha fusionado en main mediante git merge una vez validadas las tareas, asegurando que los cambios de infraestructura y los de lógica de aplicación convivieran sin errores.
+
+* **Gestión de tareas (Issues)**
+El trabajo se ha repartido mediante una división clara de competencias:
+
+Se ha utilizado una metodología de trabajo por áreas: mientras el equipo de infraestructura preparaba el contenedor y la persistencia de datos, el equipo de desarrollo trabajaba en las funcionalidades del restaurante (views y forms).
+
+Esto permitió avanzar en paralelo, minimizando los tiempos de espera y maximizando la eficiencia.
+
+* **Revisión de código**
+Se ha llevado a cabo una revisión cruzada (cross-review) antes de realizar los merges:
+
+Se ha verificado que las vistas desarrolladas en rama-angel funcionaran correctamente sobre la base de datos configurada en infraestructura-docker.
+
+Antes de integrar cualquier rama en main, se ha realizado un despliegue local completo utilizando docker compose up --build para asegurar que el entorno integrado fuera funcional.
+
+* **Resolución de conflictos**
+Dada la separación de ramas (Infraestructura vs. Lógica), los conflictos fueron mínimos:
+
+Estos se resolvieron mediante la sincronización proactiva con main (git fetch y git merge), analizando los cambios en los archivos de configuración y modelos de Django para garantizar la compatibilidad total.
