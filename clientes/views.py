@@ -16,9 +16,30 @@ from staff.mixins import ClientePropietarioMixin
 
 # Create your views here.
 def inicio(request):
-    productos = Producto.objects.filter(activo=True)
+    productos_activos = Producto.objects.filter(activo=True)
+    
+    # Productos del día
+    carta_del_dia = productos_activos.filter(producto_del_dia=True)
+    
+    if not carta_del_dia.exists():
+        carta_del_dia = None  # Indicamos que no hay carta del día
+
+    productos = []
+    for p in productos_activos:
+        descuento = p.categoria.cupon.descuento if p.categoria and p.categoria.cupon else 0
+        precio_final = round(p.precio * (100 - descuento) / 100, 2)
+        productos.append({
+            'nombre': p.nombre,
+            'descripcion': p.descripcion,
+            'precio': p.precio,
+            'precio_descuento': precio_final,
+            'categoria': p.categoria.nombre if p.categoria else "Sin categoría",
+            'empresa': p.empresa.nombre_comercial if p.empresa else "Sin empresa",
+        })
+
     return render(request, "clientes/inicio.html", {
-        "productos": productos
+        "productos": productos,
+        "carta_del_dia": carta_del_dia,
     })
 
 class UsuarioCreateView(CreateView):

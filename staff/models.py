@@ -55,13 +55,13 @@ class Empresa(models.Model):
         default=True,
         verbose_name="¿Activa?"
     )
-    codigo = models.CharField(
-        max_length=20,
-        unique=True,
-        null=True,
-        blank=True,
-        verbose_name="Código de empresa"
-    )
+    codigo = models.PositiveIntegerField(unique=True, null=True, blank=True, verbose_name="Código de empresa")
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)  # Primero guardamos para obtener el ID
+        if not self.codigo:
+            self.codigo = self.id + 1000
+            super().save(update_fields=['codigo'])  # Guardamos solo el código
     
     class Meta:
         verbose_name = "Empresa"
@@ -97,7 +97,7 @@ class Producto(models.Model):
         default=True,
         verbose_name="¿Producto activo?"
     )
-    
+    producto_del_dia = models.BooleanField(default=False, verbose_name="Producto del día")
     # Si borramos la empresa, el producto no se elimina, solo se queda sin empresa
     empresa = models.ForeignKey(
         Empresa,

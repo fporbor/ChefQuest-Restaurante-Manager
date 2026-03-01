@@ -40,7 +40,7 @@ class Usuario(AbstractUser):
     # Relación con empresa
     empresa = models.ForeignKey(
         Empresa,
-        on_delete=models.CASCADE,  # SI borras la empresa, borramos al usuario.
+        on_delete=models.CASCADE,  # Si borras la empresa, borramos al usuario.
         null=True,
         blank=True,
         verbose_name="Empresa"
@@ -130,15 +130,6 @@ class Reserva_Pedido(models.Model):
         null=True,
         blank=True,
         verbose_name="Cliente"
-    )
-
-    # Relación con empresa
-    empresa = models.ForeignKey(
-        Empresa,
-        on_delete=models.CASCADE,  # Si borramos la empresa, borramos las reservas asociadas
-        null=True,
-        blank=True,
-        verbose_name="Empresa"
     )
 
     # Productos asociados a esta reserva

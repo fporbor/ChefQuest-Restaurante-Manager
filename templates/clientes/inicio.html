@@ -1,10 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>Carta</h1>
+<h1>Carta del Día</h1>
 
-{% for producto in productos %}
-    <p>{{ producto.nombre }} - {{ producto.precio }}€</p>
-{% endfor %}
+{% if carta_del_dia %}
+<div class="productos-grid" style="display:flex; flex-wrap: wrap; gap: 20px;">
+    {% for p in carta_del_dia %}
+    <div class="producto" style="width: calc(50% - 10px); border: 2px solid #ff6f61; padding: 10px; border-radius: 8px; background:#fff0f0;">
+        <h3>{{ p.nombre }}</h3>
+        <p>{{ p.descripcion }}</p>
+        {% if p.categoria.cupon %}
+            <p>Precio original: <span style="text-decoration: line-through;">{{ p.precio }}€</span></p>
+            <p>Con descuento: <strong>{{ p.precio|floatformat:2|floatformat:""|add:""|floatformat:"2" }}€</strong></p>
+        {% else %}
+            <p>Precio: <strong>{{ p.precio }}€</strong></p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>Hoy no tenemos carta del día 😔</p>
+{% endif %}
+
+<h1>Todos los productos</h1>
+<div class="productos-grid" style="display:flex; flex-wrap: wrap; gap: 20px;">
+    {% for producto in productos %}
+    <div class="producto" style="width: calc(50% - 10px); border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+        <h3>{{ producto.nombre }}</h3>
+        <p><strong>Categoría:</strong> {{ producto.categoria }}</p>
+        <p><strong>Proveedor:</strong> {{ producto.empresa }}</p>
+        <p>{{ producto.descripcion }}</p>
+        {% if producto.precio != producto.precio_descuento %}
+            <p>Precio original: <span style="text-decoration: line-through;">{{ producto.precio }}€</span></p>
+            <p>Precio con descuento: <strong>{{ producto.precio_descuento }}€</strong></p>
+        {% else %}
+            <p>Precio: <strong>{{ producto.precio }}€</strong></p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
 
 {% endblock %}

@@ -7,7 +7,8 @@ from django.contrib import messages
 from django.db.models import F, Count
 from django.core.exceptions import PermissionDenied
 
-from .models import Empresa, Producto
+from .models import Producto
+from clientes.models import Usuario
 from clientes.models import Reserva_Pedido
 from .mixins import EmpresaEnSesionMixin, EmpresaStaffMixin
 
@@ -19,34 +20,47 @@ from .mixins import EmpresaEnSesionMixin, EmpresaStaffMixin
 @login_required
 def login_empresa(request):
     if request.method == "POST":
+        username = request.POST.get("username")
         codigo = request.POST.get("codigo")
 
-        if not codigo:
-            messages.error(request, "Debe introducir un código.")
+        # Validamos que ambos campos existan
+        if not username or not codigo:
+            messages.error(request, "Debe introducir usuario y código de empresa.")
             return redirect("login_empresa")
 
         try:
-            empresa = Empresa.objects.get(codigo=codigo, activo=True)
-            request.session["empresa_id"] = empresa.id
-            messages.success(request, f"Sesión iniciada en {empresa.nombre_comercial}")
-            return redirect("producto_list")
+            # Buscamos al usuario
+            user = Usuario.objects.get(username=username)
+        except Usuario.DoesNotExist:
+            messages.error(request, "Usuario no existe.")
+            return redirect("login_empresa")
 
-        except Empresa.DoesNotExist:
-            messages.error(request, "Código inválido.")
+        # Validamos que el usuario tenga empresa y que el código coincida
+        if not user.empresa or str(user.empresa.codigo) != codigo:
+            messages.error(request, "Código de empresa incorrecto o usuario sin empresa asignada.")
+            return redirect("login_empresa")
+
+        # Guardamos la empresa en la sesión
+        request.session["empresa_id"] = user.empresa.id
+        messages.success(request, f"Sesión iniciada en {user.empresa.nombre_comercial}")
+        return redirect("producto_list")
 
     return render(request, "staff/login_empresa.html")
 
 
 @login_required
 def logout_empresa(request):
+    # Eliminamos la empresa de la sesión
     request.session.pop("empresa_id", None)
     messages.info(request, "Sesión de empresa cerrada.")
-    return redirect("staff:login_empresa")
+    return redirect("login_empresa")
 
 
 # ==============================
 # CRUD PRODUCTOS (CBV OBLIGATORIO)
 # ==============================
+
+
 
 class ProductoListView(LoginRequiredMixin,
                        PermissionRequiredMixin,
@@ -58,8 +72,13 @@ class ProductoListView(LoginRequiredMixin,
     template_name = "staff/producto_list.html"
 
     def get_queryset(self):
-        empresa_id = self.request.session.get("empresa_id")
-        return Producto.objects.filter(empresa_id=empresa_id)
+        user = self.request.user
+        if user.empresa:
+            # Si tiene empresa asignada, filtramos sus productos
+            return Producto.objects.filter(empresa=user.empresa)
+        else:
+            # Lanza 403 y Django mostrará la plantilla 403.html
+            raise PermissionDenied("No tienes empresa asignada para ver productos")
 
 
 class ProductoCreateView(LoginRequiredMixin,

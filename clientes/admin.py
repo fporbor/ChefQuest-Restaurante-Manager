@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 from .models import Usuario,Usuario_Perfil,Reserva_Pedido
 
 # Register your models here.
@@ -20,7 +21,9 @@ class UsuarioPerfilInline(admin.StackedInline):
 # Admin personalizado para Usuario
 # -----------------------------
 @admin.register(Usuario)
-class UsuarioAdmin(admin.ModelAdmin):
+class UsuarioAdmin(UserAdmin):  # 👈 CAMBIO CLAVE AQUÍ
+    model = Usuario
+
     list_display = (
         "username",
         "nombre_visible",
@@ -28,13 +31,34 @@ class UsuarioAdmin(admin.ModelAdmin):
         "empresa",
         "is_staff",
         "is_active",
-        "fecha_alta"
-    )  # Columnas que se ven en la lista
-    list_filter = ("is_staff", "is_active", "empresa")  # Filtros a la derecha
-    search_fields = ("username", "nombre_visible", "email")  # Buscador
+        "fecha_alta",
+    )
+
+    list_filter = ("is_staff", "is_active", "empresa")
+
+    search_fields = ("username", "nombre_visible", "email")
+
     ordering = ("username",)
-    inlines = [UsuarioPerfilInline]  # Mostramos el perfil dentro del usuario
-    filter_horizontal = ("groups", "user_permissions")  # Mejor UI para muchos grupos/permisos
+
+    inlines = [UsuarioPerfilInline]
+
+    filter_horizontal = ("groups", "user_permissions")
+
+    readonly_fields = ("fecha_alta",)
+
+    # 🔹 Añadimos tus campos personalizados
+    fieldsets = UserAdmin.fieldsets + (
+        ("Información adicional", {
+            "fields": ("nombre_visible", "telefono", "empresa", "fecha_alta"),
+        }),
+    )
+
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        ("Información adicional", {
+            "fields": ("nombre_visible", "telefono", "empresa"),
+        }),
+    )
+
 
 # -----------------------------
 # Admin para Usuario_Perfil
@@ -52,12 +76,11 @@ class ReservaPedidoAdmin(admin.ModelAdmin):
     list_display = (
         "tipo",
         "cliente",
-        "empresa",
         "fecha",
         "estado",
         "comensales"
     )
-    list_filter = ("tipo", "estado", "empresa")
+    list_filter = ("tipo", "estado")
     search_fields = ("cliente__username", "empresa__nombre_comercial", "direccion", "notas")
     ordering = ("-fecha",)
     filter_horizontal = ("productos",)  # Mejor UI para seleccionar múltiples productos
