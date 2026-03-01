@@ -3,6 +3,8 @@ import os
 import django
 import random
 from datetime import datetime, timedelta
+from django.utils import timezone
+
 
 # ---------------------------
 # Configura Django
@@ -17,7 +19,7 @@ from staff.models import Empresa, Producto, Categoria, Cupon
 from clientes.models import Usuario, Reserva_Pedido
 
 # ---------------------------
-# Crear superuser de prueba si no existe
+# Crear superuser de prueba
 # ---------------------------
 superuser_username = "eladminguay"
 superuser_password = "eladmin123"
@@ -35,9 +37,9 @@ else:
     print(f"Superuser '{superuser_username}' ya existe, no se modifica")
 
 # ---------------------------
-# Limpiamos datos existentes (sin borrar superusers)
+# Limpiar datos (excepto superusers)
 # ---------------------------
-print("Eliminando datos anteriores (sin superusers)...")
+print("Eliminando datos anteriores...")
 Reserva_Pedido.objects.all().delete()
 Usuario.objects.filter(is_superuser=False).delete()
 Producto.objects.all().delete()
@@ -46,93 +48,132 @@ Cupon.objects.all().delete()
 Empresa.objects.all().delete()
 
 # ---------------------------
-# Creamos Cupones
+# Crear Cupones
 # ---------------------------
 print("Creando cupones...")
-cupones = []
-for i in range(3):
-    c = Cupon.objects.create(
-        nombre=f"CUPON{i+1}",
-        descuento=random.choice([5, 10, 15, 20])
-    )
-    cupones.append(c)
+cupones = [
+    Cupon.objects.create(nombre="DESCUENTO5", descuento=5),
+    Cupon.objects.create(nombre="DESCUENTO10", descuento=10),
+    Cupon.objects.create(nombre="DESCUENTO15", descuento=15),
+    Cupon.objects.create(nombre="DESCUENTO20", descuento=20),
+]
 
 # ---------------------------
-# Creamos Empresas
+# Crear Empresas (las que pediste)
 # ---------------------------
 print("Creando empresas...")
+
+empresas_data = [
+    ("Paco S.L", "contacto@pacosl.com"),
+    ("Mercadona", "info@mercadona.com"),
+    ("Alimentación Luna", "contacto@alimentacionluna.com"),
+]
+
 empresas = []
-for i in range(3):
-    e = Empresa.objects.create(
-        nombre_comercial=f"Empresa{i+1}",
-        contacto=f"contacto{i+1}@empresa.com",
-        activo=True,
-        codigo=str(1000 + i + 1)
+for i, (nombre, correo) in enumerate(empresas_data):
+    empresas.append(
+        Empresa.objects.create(
+            nombre_comercial=nombre,
+            contacto=correo,
+            activo=True,
+            codigo=str(2000 + i + 1)
+        )
     )
-    empresas.append(e)
 
 # ---------------------------
-# Creamos Categorias
+# Crear Categorías reales
 # ---------------------------
-print("Creando categorias...")
+print("Creando categorías...")
+
+categorias_data = [
+    "Fruta",
+    "Verdura",
+    "Pescado",
+    "Carne",
+    "Bebidas",
+    "Lácteos",
+    "Panadería",
+    "Congelados",
+]
+
 categorias = []
-for i in range(3):
-    cat = Categoria.objects.create(
-        nombre=f"Categoria{i+1}",
-        cupon=random.choice(cupones)
+for nombre in categorias_data:
+    categorias.append(
+        Categoria.objects.create(
+            nombre=nombre,
+            cupon=random.choice(cupones)
+        )
     )
-    categorias.append(cat)
 
 # ---------------------------
-# Creamos Productos
+# Productos reales por categoría
+# ---------------------------
+productos_por_categoria = {
+    "Fruta": ["Manzana", "Plátano", "Naranja", "Fresa", "Pera"],
+    "Verdura": ["Lechuga", "Tomate", "Zanahoria", "Cebolla", "Pimiento"],
+    "Pescado": ["Salmón", "Merluza", "Atún", "Sardinas", "Bacalao"],
+    "Carne": ["Pollo", "Ternera", "Cerdo", "Cordero", "Pavo"],
+    "Bebidas": ["Agua", "Coca-Cola", "Zumo de Naranja", "Cerveza", "Vino"],
+    "Lácteos": ["Leche", "Queso", "Yogur", "Mantequilla", "Kéfir"],
+    "Panadería": ["Pan", "Croissant", "Bollo", "Baguette", "Donut"],
+    "Congelados": ["Pizza congelada", "Verduras congeladas", "Helado", "Nuggets", "Patatas fritas"],
+}
+
+# ---------------------------
+# Crear Productos
 # ---------------------------
 print("Creando productos...")
-for i in range(10):
-    Producto.objects.create(
-        nombre=f"Producto{i+1}",
-        descripcion=f"Descripción del producto {i+1}",
-        precio=random.randint(5, 100),
-        coste=random.randint(1, 50),
-        stock=random.randint(10, 100),
-        activo=True,
-        empresa=random.choice(empresas),
-        categoria=random.choice(categorias)
-    )
+
+for categoria in categorias:
+    lista = productos_por_categoria.get(categoria.nombre, [])
+    for nombre_producto in lista:
+        Producto.objects.create(
+            nombre=nombre_producto,
+            descripcion=f"{nombre_producto} fresco y de calidad",
+            precio=random.randint(1, 20),
+            coste=random.randint(1, 10),
+            stock=random.randint(20, 200),
+            activo=True,
+            empresa=random.choice(empresas),
+            categoria=categoria
+        )
 
 # ---------------------------
-# Creamos Usuarios (sin tocar superusers)
+# Crear Usuarios normales
 # ---------------------------
 print("Creando usuarios...")
+
 usuarios = []
 for i in range(5):
-    u = Usuario.objects.create_user(
-        username=f"user{i+1}",
-        password="password123",
-        nombre_visible=f"Usuario{i+1}",
-        email=f"user{i+1}@email.com",
-        empresa=random.choice(empresas)
+    usuarios.append(
+        Usuario.objects.create_user(
+            username=f"user{i+1}",
+            password="password123",
+            nombre_visible=f"Usuario {i+1}",
+            email=f"user{i+1}@email.com",
+            empresa=random.choice(empresas)
+        )
     )
-    usuarios.append(u)
 
 # ---------------------------
-# Creamos Reservas/Pedidos
+# Crear Reservas/Pedidos
 # ---------------------------
 print("Creando reservas/pedidos...")
+
 TIPOS = ["LOCAL", "COMIDA", "EVENTO"]
 ESTADOS = ["PENDIENTE", "CONFIRMADO", "CANCELADO", "ENTREGADO"]
 
 for i in range(10):
     r = Reserva_Pedido.objects.create(
         tipo=random.choice(TIPOS),
-        fecha=datetime.now() + timedelta(days=random.randint(0, 10)),
+        fecha = timezone.now() + timedelta(days=random.randint(0, 10)),
         comensales=random.randint(1, 6),
         direccion=f"Calle {i+1}, Ciudad",
         notas=f"Notas de la reserva {i+1}",
         estado=random.choice(ESTADOS),
         cliente=random.choice(usuarios)
     )
-    # Productos aleatorios
-    productos = Producto.objects.order_by("?")[:random.randint(1, 3)]
-    r.productos.set(productos)
+    productos_random = Producto.objects.order_by("?")[:random.randint(1, 4)]
+    r.productos.set(productos_random)
 
-print("Base de datos poblada correctamente ✅ (superusers intactos)")
+print("Base de datos poblada correctamente con empresas reales 🎉")
