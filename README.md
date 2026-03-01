@@ -48,11 +48,15 @@ Para cumplir con la rúbrica oficial, se han implementado los siguientes element
 * **Aislamiento de Red**: Comunicación entre servicios mediante una red virtual interna (chefquest_network).
 
 ### Mapa de Trazabilidad
-ID,Requisito,Ubicación / Evidencia
-R-12,Dockerización Completa,Dockerfile y docker-compose.yml
-R-12.2,Persistencia de datos,Volumen postgres_data en Docker
-R-13,Gestión de dependencias,Archivo requirements.txt
-R-14,Documentación técnica,Este archivo README.md
+|   ID   |          Requisito / Funcionalidad          |      Artefacto / Rama     |     Estado    |
+|--------|---------------------------------------------|---------------------------|---------------|
+| REQ-01 | Entorno de desarrollo (Docker / PostgreSQL) | `infraestructura-docker`  | ✔️ Completado |
+| REQ-02 | Lógica de negocio (Vistas, Models, Forms)   | `rama-angel`              | ✔️ Completado |
+| REQ-03 | Monitorización (Middleware personalizado)   | `chefquest/middleware.py` | ✔️ Completado |
+| REQ-04 | Gestión de usuarios y Admin                 | `rama-angel` / `main`     | ✔️ Completado |
+| REQ-05 | Integración Continua (Merge)                | `main`                    | ✔️ Completado |
+| REQ-06 | Documentación del Workflow                  | `README.md`               | ✔️ Completado |
+
 ### Extras opcionales:
 1. Modo “carta del día” (productos destacados configurables por staff).
 2. Cupones simples (descuento fijo/porcentaje) aplicados en pedidos.
