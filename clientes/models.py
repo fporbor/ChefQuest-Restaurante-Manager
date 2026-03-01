@@ -39,7 +39,7 @@ class Usuario(AbstractUser):
 
     # Relación con empresa
     empresa = models.ForeignKey(
-        "Empresa",
+        Empresa,
         on_delete=models.CASCADE,  # SI borras la empresa, borramos al usuario.
         null=True,
         blank=True,
