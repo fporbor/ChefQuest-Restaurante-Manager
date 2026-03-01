@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Crear cuenta</h2>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {# Errores globales y por formulario, presentados de forma legible #}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% if form.errors %}
+      <div class="form-errors">
+        <strong>Errores en los datos de usuario</strong>
+        <ul>
+          {% for field, errs in form.errors.items %}
+            <li><strong>{{ field }}:</strong> {{ errs|join:", " }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if perfil_form and perfil_form.errors %}
+      <div class="form-errors">
+        <strong>Errores en el perfil</strong>
+        <ul>
+          {% for field in perfil_form %}
+            {% if field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if empresa_form is not None and empresa_form.errors %}
+      <div class="form-errors">
+        <strong>Errores en la empresa</strong>
+        <ul>
+          {% for field in empresa_form %}
+            {% if field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <h3>Datos de usuario</h3>
+
+    <label for="{{ form.username.id_for_label }}">Username</label>
+    {{ form.username }}
+
+    <label for="{{ form.email.id_for_label }}">Email</label>
+    {{ form.email }}
+
+    <label for="{{ form.nombre_visible.id_for_label }}">Nombre visible</label>
+    {{ form.nombre_visible }}
+
+    <label for="{{ form.telefono.id_for_label }}">Teléfono</label>
+    {{ form.telefono }}
+
+    <label for="{{ form.password1.id_for_label }}">Contraseña</label>
+    {{ form.password1 }}
+
+    <label for="{{ form.password2.id_for_label }}">Confirmar contraseña</label>
+    {{ form.password2 }}
+
+    <div class="mb-3">
+      <label for="{{ form.es_empresa.id_for_label }}">
+        {{ form.es_empresa }} {{ form.es_empresa.label }}
+      </label>
+    </div>
+
+    {# Campo oculto para que UsuarioRegistroForm.nombre_empresa reciba el valor si usas empresa-section visible #}
+    <input type="hidden" name="nombre_empresa" id="id_nombre_empresa" value="{{ form.nombre_empresa.value|default:'' }}">
+
+    <div id="empresa-section" style="display: none; margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
+      <h3>Datos de la Empresa</h3>
+
+      {% if empresa_form %}
+        {% if empresa_form.non_field_errors %}
+          <div class="form-errors">{{ empresa_form.non_field_errors }}</div>
+        {% endif %}
+
+        <label for="{{ empresa_form.nombre_comercial.id_for_label }}">Nombre comercial</label>
+        {{ empresa_form.nombre_comercial }}
+
+        <label for="{{ empresa_form.contacto.id_for_label }}">Correo de contacto</label>
+        {{ empresa_form.contacto }}
+
+        <label for="{{ empresa_form.codigo.id_for_label }}">Código (opcional)</label>
+        {{ empresa_form.codigo }}
+      {% else %}
+        <label for="empresa_nombre_comercial">Nombre comercial</label>
+        <input type="text" name="empresa_nombre_comercial" id="empresa_nombre_comercial" value="{{ request.POST.empresa_nombre_comercial|default:'' }}">
+
+        <label for="empresa_contacto">Correo de contacto</label>
+        <input type="email" name="empresa_contacto" id="empresa_contacto" value="{{ request.POST.empresa_contacto|default:'' }}">
+
+        <label for="empresa_codigo">Código (opcional)</label>
+        <input type="text" name="empresa_codigo" id="empresa_codigo" value="{{ request.POST.empresa_codigo|default:'' }}">
+      {% endif %}
+
+      <p class="help-text">Si marcas que eres empresa y rellenas estos datos, se creará una empresa asociada a tu cuenta.</p>
+    </div>
+
+    <hr>
+
+    <h3>Perfil</h3>
+
+    {# Renderizado explícito de los campos de perfil para que el usuario los vea y pueda rellenar #}
+    <label for="{{ perfil_form.preferencias_de_comunicacion.id_for_label }}">Preferencias de comunicación</label>
+    {{ perfil_form.preferencias_de_comunicacion }}
+
+    <label for="{{ perfil_form.direccion.id_for_label }}">Dirección habitual</label>
+    {{ perfil_form.direccion }}
+
+    <label for="{{ perfil_form.observacion.id_for_label }}">Observaciones</label>
+    {{ perfil_form.observacion }}
+
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn">Registrarse</button>
+    </div>
+  </form>
+
+  <p style="margin-top:15px;">
+    ¿Ya tienes cuenta?
+    <a href="{% url 'clientes:login' %}" class="btn">Iniciar sesión</a>
+  </p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const esEmpresaCheckbox = document.querySelector('[name="{{ form.es_empresa.html_name }}"]') || document.querySelector('[name="es_empresa"]');
+  const empresaSection = document.getElementById('empresa-section');
+  const empresaNombreVisible = document.getElementById('empresa_nombre_comercial') || document.querySelector('[name="nombre_comercial"]') || null;
+  const hiddenNombreEmpresa = document.getElementById('id_nombre_empresa');
+
+  function toggleEmpresaSection() {
+    if (!esEmpresaCheckbox) return;
+    const show = (esEmpresaCheckbox.type === 'checkbox' && esEmpresaCheckbox.checked);
+    empresaSection.style.display = show ? 'block' : 'none';
+    if (!show && empresaNombreVisible && hiddenNombreEmpresa) {
+      hiddenNombreEmpresa.value = '';
+    }
+  }
+
+  // Antes de enviar, si hay un nombre comercial visible, copiarlo al campo oculto nombre_empresa
+  const form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', function () {
+      if (empresaNombreVisible && hiddenNombreEmpresa) {
+        const val = empresaNombreVisible.value ? empresaNombreVisible.value.trim() : '';
+        if (val) hiddenNombreEmpresa.value = val;
+      }
+    });
+  }
+
+  if (esEmpresaCheckbox) {
+    toggleEmpresaSection();
+    esEmpresaCheckbox.addEventListener('change', toggleEmpresaSection);
+  }
+});
+</script>
+
+<style>
+/* Mejora visual de errores (puedes mover esto a estilos.css) */
+.form-errors {
+  background: #fff6f6;
+  border: 1px solid #f5c2c2;
+  color: #7a1f1f;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.form-errors ul { margin: 0; padding-left: 1.1rem; }
+.help-text { color: #6b7280; font-size: 0.9rem; margin-top: 0.5rem; }
+</style>
+{% endblock %}
+

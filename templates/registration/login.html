@@ -1,16 +1,67 @@
 {% extends "base.html" %}
-
 {% block content %}
-<h2>Inicio de sesión</h2>
+<div class="card">
+  <h1>Iniciar sesión</h1>
 
-<form method="post">
+  <form method="post" novalidate>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Entrar</button>
-</form>
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
 
-<p>
-    ¿No tienes cuenta?
-    <a href="{% url 'clientes:registro' %}">Regístrate</a>
-</p>
+    <div>
+      <label for="id_username">Usuario</label>
+      <input type="text" name="username" id="id_username"
+             value="{{ request.POST.username|default:'' }}">
+    </div>
+
+    <div id="password-field">
+      <label for="id_password">Contraseña</label>
+      <input type="password" name="password" id="id_password">
+    </div>
+
+    <div class="form-row checkbox-row">
+      <label class="checkbox-label" for="id_es_empresa">
+        <input type="checkbox" name="es_empresa" id="id_es_empresa"
+               {% if request.POST.es_empresa %}checked{% endif %}>
+        Soy una  empresa
+      </label>
+    </div>
+
+    <div id="empresa-field" style="display:none;">
+      <label for="id_codigo_empresa">Código de empresa</label>
+      <input type="text" name="codigo_empresa" id="id_codigo_empresa"
+             value="{{ request.POST.codigo_empresa|default:'' }}">
+    </div>
+
+    <div style="margin-top:1rem;">
+      <button type="submit">Entrar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const checkbox = document.getElementById('id_es_empresa');
+  const empresaField = document.getElementById('empresa-field');
+
+  function toggle() {
+    if (!checkbox) return;
+    empresaField.style.display = checkbox.checked ? 'block' : 'none';
+    // si se oculta, limpiar el campo para evitar envíos accidentales
+    if (!checkbox.checked) {
+      const codigo = document.getElementById('id_codigo_empresa');
+      if (codigo) codigo.value = '';
+    }
+  }
+
+  if (checkbox) {
+    toggle();
+    checkbox.addEventListener('change', toggle);
+  }
+});
+</script>
 {% endblock %}
+
+
+

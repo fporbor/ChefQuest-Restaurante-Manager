@@ -1,16 +1,79 @@
 {% extends "base.html" %}
 {% block content %}
-
 <div class="card">
-<h2>Producto</h2>
+  <h2>Producto</h2>
 
-<form method="post">
+  <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+    {{ form.nombre.label_tag }} {{ form.nombre }}
+    {{ form.descripcion.label_tag }} {{ form.descripcion }}
+    {{ form.precio.label_tag }} {{ form.precio }}
+    {{ form.coste.label_tag }} {{ form.coste }}
+    {{ form.stock.label_tag }} {{ form.stock }}
+    {{ form.categoria.label_tag }} {{ form.categoria }}
+
+    <div class="form-row">
+      <label for="id_activo">¿Producto activo?</label>
+      <label class="switch">
+        {{ form.activo }}
+        <span class="slider"></span>
+      </label>
+      
+      {{ form.activo.errors }}
+    </div>
+    <br>
 
     <button type="submit">Guardar</button>
-</form>
-
+  </form>
 </div>
 
+<style>
+/* Toggle switch CSS */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  margin-left: 8px;
+}
+.switch input { display: none; }
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #ccc;
+  border-radius: 28px;
+  transition: background-color .2s;
+}
+.slider::before {
+  content: "";
+  position: absolute;
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  top: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.switch input:checked + .slider {
+  background-color: #28a745;
+}
+.switch input:checked + .slider::before {
+  transform: translateX(24px);
+}
+</style>
+
+<script>
+/* Asegura que el checkbox tenga aria-hidden y role para accesibilidad opcional */
+document.addEventListener('DOMContentLoaded', function(){
+  const checkbox = document.querySelector('input[name="activo"]');
+  if(checkbox){
+    checkbox.setAttribute('aria-hidden', 'true');
+    checkbox.style.position = 'absolute';
+    checkbox.style.opacity = 0;
+  }
+});
+</script>
 {% endblock %}

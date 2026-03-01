@@ -1,45 +1,33 @@
+# clientes/forms.py
 from django import forms
 from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from datetime import timedelta
 from django.contrib.auth import authenticate
+from django.db import transaction
+from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
+from django.utils.crypto import get_random_string
 
 from .models import Usuario, Usuario_Perfil, Reserva_Pedido
-
 from staff.models import Producto, Empresa
+from staff.forms import EmpresaRegistroForm
 
-from django import forms
-from django.core.exceptions import ValidationError
-from django.contrib.auth.forms import UserCreationForm
-from staff.models import Empresa
-from .models import Usuario
+
+User = get_user_model()
 
 
 class UsuarioRegistroForm(UserCreationForm):
     email = forms.EmailField(required=True)
-
-    es_empresa = forms.BooleanField(
-        required=False,
-        label="Registrarme como empresa"
-    )
-
-    nombre_empresa = forms.CharField(
-        required=False,
-        label="Nombre de la empresa"
-    )
+    es_empresa = forms.BooleanField(required=False, label="Registrarme como empresa")
+    nombre_empresa = forms.CharField(required=False, label="Nombre de la empresa")
 
     class Meta:
         model = Usuario
         fields = [
-            "username",
-            "email",
-            "nombre_visible",
-            "telefono",
-            "password1",
-            "password2",
-            "es_empresa",
-            "nombre_empresa",
+            "username", "email", "nombre_visible", "telefono",
+            "password1", "password2", "es_empresa", "nombre_empresa",
         ]
 
     def clean(self):
@@ -47,31 +35,61 @@ class UsuarioRegistroForm(UserCreationForm):
         es_empresa = cleaned_data.get("es_empresa")
         nombre_empresa = cleaned_data.get("nombre_empresa")
 
-        if es_empresa and not nombre_empresa:
-            raise ValidationError(
-                "Debes indicar el nombre de la empresa."
-            )
+        if es_empresa:
+            # Si nombre_empresa no viene en el form principal, buscar alternativa en POST/raw data
+            if not nombre_empresa:
+                # self.data contiene los datos crudos enviados (QueryDict)
+                alt_nombre = None
+                # posibles nombres que tu plantilla podría enviar
+                for key in ("empresa_nombre_comercial", "nombre_comercial", "empresa_nombre"):
+                    if self.data.get(key):
+                        alt_nombre = self.data.get(key).strip()
+                        break
+
+                if alt_nombre:
+                    # rellenar cleaned_data para que el resto del flujo lo vea
+                    cleaned_data["nombre_empresa"] = alt_nombre
+                else:
+                    raise ValidationError("Si te registras como empresa debes indicar el nombre de la empresa.")
 
         return cleaned_data
 
-    def save(self, commit=True):
-        user = super().save(commit=False)
+    def _generar_codigo_unico(self):
+        # Generador seguro de código numérico de 8 dígitos (ajusta longitud si lo deseas)
+        for _ in range(10):
+            codigo = get_random_string(8, allowed_chars='0123456789')
+            if not Empresa.objects.filter(codigo=codigo).exists():
+                return codigo
+        raise ValidationError("No se pudo generar un código de empresa. Intenta de nuevo.")
 
+    @transaction.atomic
+    def save(self, commit=True):
+        """
+        Guarda únicamente el usuario y asigna grupos/flags.
+        La creación del perfil y de la empresa debe hacerse desde la vista
+        (UsuarioCreateView) para evitar duplicados en la relación OneToOne.
+        """
+        user = super().save(commit=False)
+        user.email = self.cleaned_data.get("email")
         if commit:
             user.save()
 
-            # 🔥 AQUÍ está el cambio automático
-            if self.cleaned_data.get("es_empresa"):
-                grupo = Group.objects.get(name="Empresas")
-                user.groups.add(grupo)
-                user.is_staff = True  # necesario para permisos staff
-            else:
-                grupo = Group.objects.get(name="Usuarios")
-                user.groups.add(grupo)
-
+            # asignar grupo y flags
+            try:
+                if self.cleaned_data.get("es_empresa"):
+                    grupo = Group.objects.get(name="Empresas")
+                    user.groups.add(grupo)
+                    user.is_staff = True
+                else:
+                    grupo = Group.objects.get(name="Usuarios")
+                    user.groups.add(grupo)
+            except Group.DoesNotExist:
+                pass
             user.save()
 
         return user
+
+
 class UsuarioPerfilForm(forms.ModelForm):
     class Meta:
         model = Usuario_Perfil
@@ -81,8 +99,8 @@ class UsuarioPerfilForm(forms.ModelForm):
             "observacion",
         ]
 
-class ReservaPedidoForm(forms.ModelForm):
 
+class ReservaPedidoForm(forms.ModelForm):
     class Meta:
         model = Reserva_Pedido
         fields = [
@@ -159,36 +177,75 @@ class ReservaPedidoForm(forms.ModelForm):
 
         return productos
 
+
 class LoginEmpresaForm(forms.Form):
-    username = forms.CharField(label="Usuario")
-    password = forms.CharField(widget=forms.PasswordInput)
-    codigo_empresa = forms.CharField(
-        required=False,
-        label="Código Empresa"
-    )
+    username = forms.CharField(label="Usuario", max_length=150)
+    password = forms.CharField(widget=forms.PasswordInput, required=True, label="Contraseña")
+    codigo_empresa = forms.CharField(required=False, label="Código de empresa")
+    es_empresa = forms.BooleanField(required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args, **kwargs):
+        # aceptar request si la vista lo pasa, sin romper si no viene
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+        self.user = None
+        self._auth_via_codigo = False
 
     def clean(self):
-        cleaned_data = super().clean()
-        username = cleaned_data.get("username")
-        password = cleaned_data.get("password")
-        codigo_empresa = cleaned_data.get("codigo_empresa")
+        cleaned = super().clean()
+        username = cleaned.get("username")
+        password = cleaned.get("password")
+        codigo = cleaned.get("codigo_empresa")
+        es_empresa = cleaned.get("es_empresa") in [True, 'True', 'true', '1', 'on']
 
+        if not username:
+            raise ValidationError("Usuario requerido.")
+
+        # Primero intentar autenticar por contraseña (flujo normal)
         user = authenticate(username=username, password=password)
-
         if not user:
+            # Si no se autentica por contraseña, dar error genérico
             raise ValidationError("Credenciales incorrectas.")
 
-        # Si tiene empresa asociada
-        if user.empresa:
-            if not codigo_empresa:
+        # Si el usuario tiene empresa asociada (por ejemplo user.empresa o perfil)
+        empresa_obj = None
+        # Ajusta la comprobación según tu modelo: user.empresa o Usuario_Perfil.empresa
+        if hasattr(user, "empresa") and user.empresa:
+            empresa_obj = user.empresa
+        else:
+            # si usas perfil con FK a empresa:
+            perfil = getattr(user, "usuario_perfil", None) or getattr(user, "perfil", None)
+            if perfil and getattr(perfil, "empresa", None):
+                empresa_obj = perfil.empresa
+
+        # Caso: usuario tiene empresa asociada
+        if empresa_obj:
+            # Si marca es_empresa → validar código (no se exige contraseña extra)
+            if es_empresa:
+                if not codigo:
+                    raise ValidationError("Debes introducir el código de empresa.")
+                if str(empresa_obj.codigo) != str(codigo):
+                    raise ValidationError("Código de empresa incorrecto.")
+                # todo OK: autenticado por contraseña + código (o solo código si quieres)
+                self.user = user
+                self._auth_via_codigo = True
+                return cleaned
+
+            # Si NO marca es_empresa y NO proporciona código → mostramos el mensaje solicitado
+            if not es_empresa and not codigo:
                 raise ValidationError(
-                    "Debes introducir el código de empresa."
+                    "Creemos que eres una empresa: marca 'Soy empresa' e introduce el código de empresa."
                 )
 
-            if user.empresa.codigo != codigo_empresa:
-                raise ValidationError(
-                    "Código de empresa incorrecto."
-                )
+            # Si no marca pero sí proporciona código (flujo mixto): validar código
+            if codigo:
+                if str(empresa_obj.codigo) != str(codigo):
+                    raise ValidationError("Código de empresa incorrecto.")
+                self.user = user
+                self._auth_via_codigo = True
+                return cleaned
 
+        # Usuario sin empresa asociada o sin conflicto → login normal
         self.user = user
-        return cleaned_data
+        self._auth_via_codigo = False
+        return cleaned
