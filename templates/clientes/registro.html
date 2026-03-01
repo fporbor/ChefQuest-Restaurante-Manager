@@ -28,7 +28,15 @@
 
         <label>Confirmar contraseña</label>
         {{ form.password2 }}
+        <div class="mb-3">
+    {{ form.es_empresa.label_tag }}
+    {{ form.es_empresa }}
+</div>
 
+<div class="mb-3">
+    {{ form.nombre_empresa.label_tag }}
+    {{ form.nombre_empresa }}
+</div>
         <hr>
 
         <h3>Perfil</h3>

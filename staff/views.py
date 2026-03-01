@@ -7,17 +7,24 @@ from django.contrib import messages
 from django.db.models import F, Count
 from django.core.exceptions import PermissionDenied
 
-from .models import Producto
+from .models import Producto, Empresa
 from clientes.models import Usuario
 from clientes.models import Reserva_Pedido
-from .mixins import EmpresaEnSesionMixin, EmpresaStaffMixin
+from .mixins import EmpresaEnSesionMixin, EmpresaStaffMixin, UsuarioEmpresaRequiredMixin
+from .forms import EmpresaRegistroForm
 
 
 # ==============================
 # LOGIN EMPRESA (FBV OBLIGATORIO)
 # ==============================
-
+def empresa_required(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not Empresa.objects.filter(contacto=request.user.email, activo=True).exists():
+            return redirect("inicio")
+        return view_func(request, *args, **kwargs)
+    return wrapper
 @login_required
+@empresa_required
 def login_empresa(request):
     if request.method == "POST":
         username = request.POST.get("username")
@@ -49,6 +56,7 @@ def login_empresa(request):
 
 
 @login_required
+@empresa_required
 def logout_empresa(request):
     # Eliminamos la empresa de la sesión
     request.session.pop("empresa_id", None)
@@ -62,29 +70,32 @@ def logout_empresa(request):
 
 
 
-class ProductoListView(LoginRequiredMixin,
-                       PermissionRequiredMixin,
-                       EmpresaEnSesionMixin,
-                       EmpresaStaffMixin,
-                       ListView):
+class ProductoListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+
+    ListView,
+):
     model = Producto
     permission_required = "staff.view_producto"
     template_name = "staff/producto_list.html"
 
     def get_queryset(self):
-        user = self.request.user
-        if user.empresa:
-            # Si tiene empresa asignada, filtramos sus productos
-            return Producto.objects.filter(empresa=user.empresa)
-        else:
-            # Lanza 403 y Django mostrará la plantilla 403.html
-            raise PermissionDenied("No tienes empresa asignada para ver productos")
+        empresa_id = self.request.session.get("empresa_id")
+
+        if not empresa_id:
+            raise PermissionDenied("No hay empresa activa en sesión.")
+
+        return Producto.objects.filter(empresa_id=empresa_id)
 
 
-class ProductoCreateView(LoginRequiredMixin,
-                         PermissionRequiredMixin,
-                         EmpresaEnSesionMixin,
-                         CreateView):
+class ProductoCreateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    EmpresaEnSesionMixin,
+    UsuarioEmpresaRequiredMixin,
+    CreateView,
+):
     model = Producto
     fields = ["nombre", "descripcion", "precio",
               "coste", "stock", "activo", "categoria"]
@@ -102,11 +113,13 @@ class ProductoCreateView(LoginRequiredMixin,
         return super().form_valid(form)
 
 
-class ProductoUpdateView(LoginRequiredMixin,
-                         PermissionRequiredMixin,
-                         EmpresaEnSesionMixin,
-                         EmpresaStaffMixin,
-                         UpdateView):
+class ProductoUpdateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    EmpresaEnSesionMixin,
+    UsuarioEmpresaRequiredMixin,
+    UpdateView,
+):
     model = Producto
     fields = ["nombre", "descripcion", "precio",
               "coste", "stock", "activo", "categoria"]
@@ -118,12 +131,13 @@ class ProductoUpdateView(LoginRequiredMixin,
         empresa_id = self.request.session.get("empresa_id")
         return Producto.objects.filter(empresa_id=empresa_id)
 
-
-class ProductoDeleteView(LoginRequiredMixin,
-                         PermissionRequiredMixin,
-                         EmpresaEnSesionMixin,
-                         EmpresaStaffMixin,
-                         DeleteView):
+class ProductoDeleteView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    EmpresaEnSesionMixin,
+    UsuarioEmpresaRequiredMixin,
+    DeleteView,
+):
     model = Producto
     permission_required = "staff.delete_producto"
     template_name = "staff/producto_confirm_delete.html"
@@ -135,13 +149,25 @@ class ProductoDeleteView(LoginRequiredMixin,
 
 
 # ==============================
-# LISTADO RESERVAS EMPRESA
+# CRUD EMPRESAS (CBV OBLIGATORIO)
 # ==============================
 
-class ReservasEmpresaListView(LoginRequiredMixin,
-                              PermissionRequiredMixin,
-                              EmpresaEnSesionMixin,
-                              ListView):
+class EmpresaRegistroView(CreateView):
+    model = Empresa
+    form_class = EmpresaRegistroForm
+    template_name = "staff/registro_empresa.html"
+    success_url = reverse_lazy("login")
+
+# ==============================
+# LISTADO RESERVAS EMPRESA
+# ==============================
+class ReservasEmpresaListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    EmpresaEnSesionMixin,
+    UsuarioEmpresaRequiredMixin,
+    ListView,
+):
     model = Reserva_Pedido
     permission_required = "clientes.view_reserva_pedido"
     template_name = "staff/reservas_empresa_list.html"
@@ -162,7 +188,11 @@ class ReservasEmpresaListView(LoginRequiredMixin,
 # ==============================
 
 @login_required
+@empresa_required
 def confirmar_reserva(request, pk):
+    empresa_id = request.session.get("empresa_id")
+    if not empresa_id:
+        raise PermissionDenied
     empresa_id = request.session.get("empresa_id")
 
     reserva = get_object_or_404(
@@ -199,7 +229,7 @@ def confirmar_reserva(request, pk):
 # ==============================
 
 class EstadisticasView(LoginRequiredMixin,
-                       EmpresaEnSesionMixin,
+                       UsuarioEmpresaRequiredMixin,
                        ListView):
     model = Reserva_Pedido
     template_name = "staff/estadisticas.html"

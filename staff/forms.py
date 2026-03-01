@@ -2,7 +2,7 @@
 
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Producto
+from .models import Producto, Empresa, Categoria, Cupon
 
 
 class ProductoFormStaff(forms.ModelForm):
@@ -51,3 +51,8 @@ class ProductoFormStaff(forms.ModelForm):
             raise ValidationError("El stock no puede ser negativo.")
 
         return stock
+
+class EmpresaRegistroForm(forms.ModelForm):
+    class Meta:
+        model = Empresa
+        fields = ["nombre_comercial", "contacto", "codigo"]

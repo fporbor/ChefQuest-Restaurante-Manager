@@ -37,4 +37,5 @@ urlpatterns = [
 
 
     path("estadisticas/", views.EstadisticasView.as_view(), name="estadisticas"),
+    path("registro/", views.EmpresaRegistroView.as_view(), name="registro_empresa"),
 ]

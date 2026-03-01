@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView, DetailView
+from django.views.generic import CreateView, ListView, DetailView, UpdateView
+from django.views.generic.edit import UpdateView
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import login
@@ -8,11 +9,13 @@ from django.db import transaction
 from django.contrib import messages
 from django.utils.dateparse import parse_datetime
 from django.contrib.auth.decorators import login_required
+from django.views import View
 
 from .models import Usuario, Usuario_Perfil, Reserva_Pedido
-from .forms import UsuarioRegistroForm, UsuarioPerfilForm, ReservaPedidoForm
-from staff.models import Producto
+from .forms import UsuarioRegistroForm, UsuarioPerfilForm, ReservaPedidoForm, LoginEmpresaForm
+from staff.models import Producto, Empresa
 from staff.mixins import ClientePropietarioMixin
+
 
 # Create your views here.
 def inicio(request):
@@ -71,9 +74,26 @@ class UsuarioCreateView(CreateView):
 
         return self.form_invalid(form)
 
-class UsuarioLoginView(LoginView):
+class UsuarioLoginView(View):
     template_name = "registration/login.html"
-    redirect_authenticated_user = True
+
+    def get(self, request):
+        form = LoginEmpresaForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = LoginEmpresaForm(request.POST)
+
+        if form.is_valid():
+            login(request, form.user)
+
+            # Guardar empresa en sesión si tiene
+            if form.user.empresa:
+                request.session["empresa_id"] = form.user.empresa.id
+
+            return redirect("inicio")
+
+        return render(request, self.template_name, {"form": form})
 
 
 class UsuarioLogoutView(LogoutView):
@@ -136,6 +156,18 @@ class ReservaPedidoCreateView(LoginRequiredMixin, CreateView):
 
         return response
 
+class ReservaPedidoUpdateView(LoginRequiredMixin,
+                               ClientePropietarioMixin,
+                               UpdateView):
+    model = Reserva_Pedido
+    form_class = ReservaPedidoForm
+    template_name = "clientes/reserva_form.html"
+    success_url = reverse_lazy("clientes:mis_reservas")
+
+    def form_valid(self, form):
+        form.instance.cliente = self.request.user
+        return super().form_valid(form)
+
 class MisReservasListView(LoginRequiredMixin,
                           ClientePropietarioMixin,
                           ListView):
@@ -186,3 +218,20 @@ def cambiar_tema(request):
     )
 
     return response
+
+
+
+
+
+class CustomLoginView(LoginView):
+    template_name = "clientes/login.html"
+
+    def get_success_url(self):
+        user = self.request.user
+
+        # Si el email pertenece a empresa activa → ir a staff
+        if Empresa.objects.filter(contacto=user.email, activo=True).exists():
+            return reverse_lazy("staff:producto_list")
+
+        # Usuario normal → inicio público
+        return reverse_lazy("inicio")

@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.http import HttpResponseForbidden
+from django.core.exceptions import PermissionDenied
 
 
 class EmpresaEnSesionMixin(UserPassesTestMixin):
@@ -31,3 +32,12 @@ class ClientePropietarioMixin:
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(cliente=self.request.user)
+
+class UsuarioEmpresaRequiredMixin:
+    def dispatch(self, request, *args, **kwargs):
+        empresa_id = request.session.get("empresa_id")
+
+        if not empresa_id:
+            raise PermissionDenied("No hay empresa activa en sesión.")
+
+        return super().dispatch(request, *args, **kwargs)

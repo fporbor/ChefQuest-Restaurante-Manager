@@ -3,12 +3,31 @@ from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from datetime import timedelta
+from django.contrib.auth import authenticate
 
 from .models import Usuario, Usuario_Perfil, Reserva_Pedido
-from staff.models import Producto
+
+from staff.models import Producto, Empresa
+
+from django import forms
+from django.core.exceptions import ValidationError
+from django.contrib.auth.forms import UserCreationForm
+from staff.models import Empresa
+from .models import Usuario
+
 
 class UsuarioRegistroForm(UserCreationForm):
     email = forms.EmailField(required=True)
+
+    es_empresa = forms.BooleanField(
+        required=False,
+        label="Registrarme como empresa"
+    )
+
+    nombre_empresa = forms.CharField(
+        required=False,
+        label="Nombre de la empresa"
+    )
 
     class Meta:
         model = Usuario
@@ -19,17 +38,40 @@ class UsuarioRegistroForm(UserCreationForm):
             "telefono",
             "password1",
             "password2",
+            "es_empresa",
+            "nombre_empresa",
         ]
 
-    def clean_email(self):
-        email = self.cleaned_data["email"]
+    def clean(self):
+        cleaned_data = super().clean()
+        es_empresa = cleaned_data.get("es_empresa")
+        nombre_empresa = cleaned_data.get("nombre_empresa")
 
-        if Usuario.objects.filter(email=email).exists():
-            raise ValidationError("Ya existe un usuario con ese email.")
+        if es_empresa and not nombre_empresa:
+            raise ValidationError(
+                "Debes indicar el nombre de la empresa."
+            )
 
-        return email
+        return cleaned_data
 
+    def save(self, commit=True):
+        user = super().save(commit=False)
 
+        if commit:
+            user.save()
+
+            # 🔥 AQUÍ está el cambio automático
+            if self.cleaned_data.get("es_empresa"):
+                grupo = Group.objects.get(name="Empresas")
+                user.groups.add(grupo)
+                user.is_staff = True  # necesario para permisos staff
+            else:
+                grupo = Group.objects.get(name="Usuarios")
+                user.groups.add(grupo)
+
+            user.save()
+
+        return user
 class UsuarioPerfilForm(forms.ModelForm):
     class Meta:
         model = Usuario_Perfil
@@ -116,3 +158,37 @@ class ReservaPedidoForm(forms.ModelForm):
                 )
 
         return productos
+
+class LoginEmpresaForm(forms.Form):
+    username = forms.CharField(label="Usuario")
+    password = forms.CharField(widget=forms.PasswordInput)
+    codigo_empresa = forms.CharField(
+        required=False,
+        label="Código Empresa"
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        username = cleaned_data.get("username")
+        password = cleaned_data.get("password")
+        codigo_empresa = cleaned_data.get("codigo_empresa")
+
+        user = authenticate(username=username, password=password)
+
+        if not user:
+            raise ValidationError("Credenciales incorrectas.")
+
+        # Si tiene empresa asociada
+        if user.empresa:
+            if not codigo_empresa:
+                raise ValidationError(
+                    "Debes introducir el código de empresa."
+                )
+
+            if user.empresa.codigo != codigo_empresa:
+                raise ValidationError(
+                    "Código de empresa incorrecto."
+                )
+
+        self.user = user
+        return cleaned_data
