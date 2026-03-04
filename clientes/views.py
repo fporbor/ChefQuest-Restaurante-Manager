@@ -21,33 +21,37 @@ from staff.forms import EmpresaRegistroForm
 User = get_user_model()
 
 
+def calcular_precio(p):
+    descuento = 0
+    if getattr(p, "categoria", None) and getattr(p.categoria, "cupon", None):
+        descuento = p.categoria.cupon.descuento or 0
+    return round(p.precio * (100 - descuento) / 100, 2)
+
 def inicio(request):
-    # Evitar N+1: traer relaciones necesarias con select_related/prefetch_related
     productos_activos = Producto.objects.filter(activo=True).select_related(
         "categoria__cupon", "empresa"
     )
 
-    carta_del_dia_qs = productos_activos.filter(producto_del_dia=True)
-    carta_del_dia = carta_del_dia_qs if carta_del_dia_qs.exists() else None
-
+    carta_del_dia = []
     productos = []
+
     for p in productos_activos:
-        descuento = 0
-        if getattr(p, "categoria", None) and getattr(p.categoria, "cupon", None):
-            descuento = p.categoria.cupon.descuento or 0
-        precio_final = round(p.precio * (100 - descuento) / 100, 2)
-        productos.append({
+        precio_descuento = calcular_precio(p)
+        item = {
             "nombre": p.nombre,
             "descripcion": p.descripcion,
             "precio": p.precio,
-            "precio_descuento": precio_final,
-            "categoria": p.categoria.nombre if p.categoria else "Sin categoría",
+            "precio_descuento": precio_descuento,
+            "categoria": p.categoria if p.categoria else None,
             "empresa": p.empresa.nombre_comercial if p.empresa else "Sin empresa",
-        })
+        }
+        productos.append(item)
+        if p.producto_del_dia:
+            carta_del_dia.append(item)
 
     return render(request, "clientes/inicio.html", {
         "productos": productos,
-        "carta_del_dia": carta_del_dia,
+        "carta_del_dia": carta_del_dia if carta_del_dia else None,
     })
 
 

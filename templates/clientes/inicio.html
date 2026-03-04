@@ -10,10 +10,10 @@
         <h3>{{ p.nombre }}</h3>
         <p>{{ p.descripcion }}</p>
         {% if p.categoria.cupon %}
-            <p>Precio original: <span style="text-decoration: line-through;">{{ p.precio }}€</span></p>
-            <p>Con descuento: <strong>{{ p.precio|floatformat:2|floatformat:""|add:""|floatformat:"2" }}€</strong></p>
+            <p>Precio original: <span style="text-decoration: line-through;">{{ p.precio|default:0|floatformat:2 }}€</span></p>
+            <p>Con descuento: <strong>{{ p.precio_descuento|default:0|floatformat:2 }}€</strong></p>
         {% else %}
-            <p>Precio: <strong>{{ p.precio }}€</strong></p>
+            <p>Precio: <strong>{{ p.precio|default:0|floatformat:2 }}€</strong></p>
         {% endif %}
     </div>
     {% endfor %}
