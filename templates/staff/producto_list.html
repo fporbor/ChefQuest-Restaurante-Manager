@@ -33,6 +33,15 @@
               No activo
             {% endif %}
           </td>
+          <td>
+            <a class="btn btn-danger"
+               href="{% url 'staff:producto_delete' producto.pk %}">
+                Eliminar
+            </a>
+                <a href="{% url 'staff:producto_update' producto.pk %}" class="btn btn-warning">
+            Modificar
+            </a>
+          </td>
       </tr>
       {% endfor %}
       </tbody>
